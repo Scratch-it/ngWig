@@ -69,6 +69,7 @@ angular.module('ngWig').directive('ngWig', function () {
       return {
         scope: {
           content: '=ngWig',
+          showImages: '=showImages',
           debug: '&',
           cssPath: '@'
         },
@@ -111,25 +112,37 @@ angular.module('ngWig').directive('ngWig', function () {
 
 
 angular.module('ngWig').directive('ngWigEditable', function () {
+
       function init(scope, $element, attrs, ctrl) {
+
         var $document = $element[0].contentDocument,
             $body;
         $document.open();
         $document.write('<!DOCTYPE html><html><head>'+ (scope.cssPath ? ('<link href="'+ scope.cssPath +'" rel="stylesheet" type="text/css">') : '') + '</head><body contenteditable="true"></body></html>');
         $document.close();
-
         $body = angular.element($element[0].contentDocument.body);
+        $html = angular.element($element[0].contentDocument.documentElement)
 
         //model --> view
         ctrl.$render = function () {
-          $body[0].innerHTML = ctrl.$viewValue || '';
+//          $body[0].innerHTML = ctrl.$viewValue || '';
+            $html[0].innerHTML = ctrl.$viewValue || '';
+            $body = angular.element($element[0].contentDocument.body);
+            $body.attr('contenteditable',true);
+            resizeEditor();
+//            newValue = ctrl.$viewValue || '';
+//            $document.open();
+//            $document.write(newValue);
+//            $document.close();
+//            $body = angular.element($element[0].contentDocument.body);
+//            $body.attributes['contenteditable'] = true
         };
 
         //view --> model
-        $body.bind('blur keyup change paste', function () {
+        $html.bind('blur keyup change paste', function () {
           resizeEditor();
           scope.$apply(function blurkeyup() {
-            ctrl.$setViewValue($body.html());
+            ctrl.$setViewValue($html.html());
           });
         });
 
@@ -149,7 +162,7 @@ angular.module('ngWig').directive('ngWigEditable', function () {
           $document.body.focus();
           //sync
           scope.$evalAsync(function () {
-            ctrl.$setViewValue($body.html());
+            ctrl.$setViewValue($html.html());
             resizeEditor();
           });
         });
@@ -184,7 +197,7 @@ angular.module('ngwig-app-templates', ['ng-wig/views/ng-wig.html']);
 
 angular.module("ng-wig/views/ng-wig.html", []).run(["$templateCache", function($templateCache) {
   $templateCache.put("ng-wig/views/ng-wig.html",
-    "<div class=\"ng-wig\">\n" +
+    "<div class=\"ng-wig\" ng-model=\"content\">\n" +
     "  <ul class=\"nw-toolbar\">\n" +
     "    <li class=\"nw-toolbar__item\">\n" +
     "      <button type=\"button\" class=\"nw-button nw-button--header-one\" title=\"Header\" ng-click=\"execCommand('formatblock', '<h1>')\"></button>\n" +
@@ -214,7 +227,7 @@ angular.module("ng-wig/views/ng-wig.html", []).run(["$templateCache", function($
     "\n" +
     "  <div class=\"nw-editor\">\n" +
     "    <textarea class=\"nw-editor__src\" ng-show=\"editMode\" ng-model=\"content\"></textarea>\n" +
-    "    <iframe scrolling=\"{{ autoexpand ? 'no' : 'yes' }}\" class=\"nw-editor__res\" frameBorder=\"0\" ng-hide=\"editMode\" ng-model=\"content\" ng-wig-editable></iframe>\n" +
+    "    <iframe scrolling=\"{ autoexpand ? 'no' : 'yes' }\" show-images=\"showImages\" class=\"nw-editor__res\" frameBorder=\"0\" ng-hide=\"editMode\" ng-model=\"content\" ng-wig-editable si-iframe></iframe>\n" +
     "  </div>\n" +
     "</div>\n" +
     "");
