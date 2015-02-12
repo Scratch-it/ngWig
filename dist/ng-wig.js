@@ -70,6 +70,9 @@ angular.module('ngWig').directive('ngWig', function () {
         scope: {
           content: '=ngWig',
           showImages: '=showImages',
+          rawSource: '=rawSource',
+          activeLine: '=activeLine',
+          activeChars: '=activeChars',
           debug: '&',
           cssPath: '@'
         },
@@ -111,14 +114,21 @@ angular.module('ngWig').directive('ngWig', function () {
 );
 
 
-angular.module('ngWig').directive('ngWigEditable', function () {
+angular.module('ngWig').directive('ngWigEditable', ["$timeout", function ($timeout) {
 
       function init(scope, $element, attrs, ctrl) {
+      //  define(['require','parse','cheerio'], function(require,parse,cheerio){
+      //    console.log('cheerio');
+      //    scope.cheerio = require('cheerio');
+      //  }); //for fucks sake, make this a service
+      //  require(['cheerio'],function(cheerio){
+      //    scope.cheerio = cheerio;
+      //  });
 
         var $document = $element[0].contentDocument,
             $body;
         $document.open();
-        $document.write('<!DOCTYPE html><html><head>'+ (scope.cssPath ? ('<link href="'+ scope.cssPath +'" rel="stylesheet" type="text/css">') : '') + '</head><body contenteditable="true"></body></html>');
+        $document.write('<!DOCTYPE html>\n<html>\n\t<head>\n\t\t'+ (scope.cssPath ? ('<link href="'+ scope.cssPath +'" rel="stylesheet" type="text/css">') : '') + '\n\t</head>\n\t<body contenteditable="true">\n\t</body>\n</html>');
         $document.close();
         $body = angular.element($element[0].contentDocument.body);
         $html = angular.element($element[0].contentDocument.documentElement)
@@ -139,9 +149,119 @@ angular.module('ngWig').directive('ngWigEditable', function () {
         };
 
         //view --> model
-        $html.bind('blur keyup change paste', function () {
+        scope.nodeIndexToCharIndex = function(html, nodeType, n) {
+          var i,
+            index = 0,
+            search = '<' + nodeType;
+          for (i = 0; i <= n; i += 1) {
+            index = html.indexOf(search, index + 1);
+          }
+          return index;
+        };
+        scope.charIndexToLocation = function(html, index) {
+          var substr = html.substr(0, index),
+            lastLineBreak = substr.lastIndexOf('\n') || '',
+            lineNumber = (substr.match(/\n/g)||[]).length + 1,
+            columnNumber = index - lastLineBreak;
+          return [lineNumber, columnNumber];
+        };
+        scope.getLine = function(index,cleanMatchHTML) {
+          var substr = scope.rawSource.substr(0, index),
+            lastLineBreak = substr.lastIndexOf('\n') || '',
+            lineNumber = (substr.match(/\n/g) || []).length + 1,
+            columnNumber = index - lastLineBreak;
+          console.log('lineNumber, columnnumber:');
+          console.log(lineNumber + ", " + columnNumber);
+          $timeout(function () {
+            console.log('setting activeLine');
+            scope.activeLine = {line: lineNumber, column: columnNumber};
+            scope.activeChars = {start: index, end: index + cleanMatchHTML.length};
+          });
+          return;
+        }
+        scope.updateLineNumber = function(e){
+          var target = $(e.target, $element[0].contentDocument.documentElement);
+          //target.css('border','4px solid red');
+          console.log(scope.activeLine);
+          var n = 0;
+          //var index = scope.nodeIndexToCharIndex(scope.rawSource.toLowerCase(),target.nodeName.toLowerCase(),n);
+          //var res = scope.charIndexToLocation(scope.rawSource.toLowerCase(),index);
+          //var lineNumber = res[0];
+          //var columnNumber = res[1];
+          var nodeType = target[0].nodeName.toLowerCase();
+          var cleanMatchHTML = target[0].outerHTML.replace(/"/g,"'");
+          var cleanHTML = scope.rawSource.replace(/"/g,"'");
+
+          //var re = new RegExp(cleanMatchHTML,"gi");
+          //var matches = cleanHTML.match(re);
+          //console.log(cleanHTML);
+          //console.log(cleanMatchHTML);
+          //console.log(matches);
+          //console.log(re);
+          var index_start = cleanHTML.indexOf(cleanMatchHTML);
+          var index_last = cleanHTML.lastIndexOf(cleanMatchHTML);
+          //console.log("start,end: "+index_start+","+index_last);
+
+          if( -1 < index_start && index_start == index_last ){
+            var index = cleanHTML.indexOf(cleanMatchHTML);
+            //var index = scope.rawSource.toLowerCase().indexOf('<'+target.nodeName.toLowerCase());
+            scope.getLine(index,cleanMatchHTML);
+
+          } else {
+            //find position
+
+            //$cheerio = scope.cheerio.load(scope.rawSource, {lowerCaseTags: true});
+            var $matches = $(nodeType, $element[0].contentDocument.documentElement)//$html.find(nodeType);
+
+            console.log("all matches:");
+
+            var cleanHTMLlower = cleanHTML.toLowerCase();
+            var index=0;
+            var pos=0;
+            for(var i = 0; i < $matches.length; i += 1) {
+
+              if($matches.eq(i)['0'] == target['0']){
+
+                var j = 0;
+                while(j <= i){
+                  j += 1;
+                  index = index+cleanHTMLlower.substr(index).indexOf("<"+nodeType)+1;
+                }
+                scope.getLine(index-1,cleanMatchHTML);
+
+              }
+            }
+
+          }
+          return;
+        }
+        $html.bind('click', function (e) {
+          console.log('click in ng-wig');
+          console.log(e);
+          scope.updateLineNumber(e);
+          //console.log(scope.activeLine);
+          //$(e.target).css('border',"3px solid red");//.animate({border: ["3px solid red", "linear"]}, 5000);
+            //.css('border',"3px solid red");
+          return;
+        });
+        $html.bind('blur keyup change paste', function (e) {
+
+          //$timeout(function() {
+//              var consoleCustom = {
+//                  panel: $body.append('<div>'),
+//                  log: function(m){
+//                      this.panel.prepend('<div>'+m+'</div>');
+//                  }
+//              };
+//              consoleCustom.log('message');
+//              consoleCustom.log(e); return;}
+//              console.log('test2');
+//              return;
+//            }
+//          );
+
           resizeEditor();
-          scope.$apply(function blurkeyup() {
+          $timeout(function blurkeyup() {
             ctrl.$setViewValue($html.html());
           });
         });
@@ -191,7 +311,7 @@ angular.module('ngWig').directive('ngWigEditable', function () {
         link: init
       }
     }
-);
+]);
 
 angular.module('ngwig-app-templates', ['ng-wig/views/ng-wig.html']);
 
@@ -227,8 +347,9 @@ angular.module("ng-wig/views/ng-wig.html", []).run(["$templateCache", function($
     "\n" +
     "  <div class=\"nw-editor\">\n" +
     "    <textarea class=\"nw-editor__src\" ng-show=\"editMode\" ng-model=\"content\"></textarea>\n" +
-    "    <iframe scrolling=\"{ autoexpand ? 'no' : 'yes' }\" show-images=\"showImages\" class=\"nw-editor__res\" frameBorder=\"0\" ng-hide=\"editMode\" ng-model=\"content\" ng-wig-editable si-iframe></iframe>\n" +
+    "    <iframe scrolling=\"{ autoexpand ? 'no' : 'yes' }\" show-images=\"showImages\" active-line=\"activeLine\" active-chars=\"activeChars\" class=\"nw-editor__res\" frameBorder=\"0\" ng-hide=\"editMode\" ng-model=\"content\" ng-wig-editable si-iframe></iframe>\n" +
     "  </div>\n" +
     "</div>\n" +
     "");
 }]);
+
