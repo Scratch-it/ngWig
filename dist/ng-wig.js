@@ -73,12 +73,21 @@ angular.module('ngWig').directive('ngWig', function () {
           rawSource: '=rawSource',
           activeLine: '=activeLine',
           activeChars: '=activeChars',
+          highlightMode: '=highlightMode',
+          editable: '=editable',
           debug: '&',
           cssPath: '@'
         },
         restrict: 'A',
         replace: true,
-        templateUrl: 'ng-wig/views/ng-wig.html',
+        templateUrl: function (elem, attr) {
+          console.log("attr:");
+          console.log(attr);
+          if(attr.editable == 'false'){
+            return 'ng-wig/views/ng-wig-view-only.html';
+          }
+          return 'ng-wig/views/ng-wig.html';
+        },
         link: function (scope, element, attrs) {
 
           scope.originalHeight = element.outerHeight();
@@ -128,7 +137,7 @@ angular.module('ngWig').directive('ngWigEditable', ["$timeout", function ($timeo
         var $document = $element[0].contentDocument,
             $body;
         $document.open();
-        $document.write('<!DOCTYPE html>\n<html>\n\t<head>\n\t\t'+ (scope.cssPath ? ('<link href="'+ scope.cssPath +'" rel="stylesheet" type="text/css">') : '') + '\n\t</head>\n\t<body contenteditable="true">\n\t</body>\n</html>');
+        $document.write('<!DOCTYPE html>\n<html>\n\t<head>\n\t\t'+ (scope.cssPath ? ('<link href="'+ scope.cssPath +'" rel="stylesheet" type="text/css">') : '') + '\n\t</head>\n\t<body contenteditable="'+!!('true' == attrs.editable)+'">\n\t</body>\n</html>');
         $document.close();
         $body = angular.element($element[0].contentDocument.body);
         $html = angular.element($element[0].contentDocument.documentElement)
@@ -138,7 +147,9 @@ angular.module('ngWig').directive('ngWigEditable', ["$timeout", function ($timeo
 //          $body[0].innerHTML = ctrl.$viewValue || '';
             $html[0].innerHTML = ctrl.$viewValue || '';
             $body = angular.element($element[0].contentDocument.body);
-            $body.attr('contenteditable',true);
+
+            $body.attr('contenteditable', !!('true' == attrs.editable));
+
             resizeEditor();
 //            newValue = ctrl.$viewValue || '';
 //            $document.open();
@@ -242,6 +253,7 @@ angular.module('ngWig').directive('ngWigEditable', ["$timeout", function ($timeo
           //console.log(scope.activeLine);
           //$(e.target).css('border',"3px solid red");//.animate({border: ["3px solid red", "linear"]}, 5000);
             //.css('border',"3px solid red");
+          e.preventDefault();
           return;
         });
         $html.bind('blur keyup change paste', function (e) {
@@ -347,9 +359,17 @@ angular.module("ng-wig/views/ng-wig.html", []).run(["$templateCache", function($
     "\n" +
     "  <div class=\"nw-editor\">\n" +
     "    <textarea class=\"nw-editor__src\" ng-show=\"editMode\" ng-model=\"content\"></textarea>\n" +
-    "    <iframe scrolling=\"{ autoexpand ? 'no' : 'yes' }\" show-images=\"showImages\" active-line=\"activeLine\" active-chars=\"activeChars\" class=\"nw-editor__res\" frameBorder=\"0\" ng-hide=\"editMode\" ng-model=\"content\" ng-wig-editable si-iframe></iframe>\n" +
+    "    <iframe scrolling=\"{ autoexpand ? 'no' : 'yes' }\" show-images=\"showImages\" active-line=\"activeLine\" active-chars=\"activeChars\" highlight-mode=\"highlightMode\" class=\"nw-editor__res\" frameBorder=\"0\" ng-hide=\"editMode\" ng-model=\"content\" ng-wig-editable editable=\"true\" si-iframe></iframe>\n" +
+    "  </div>\n" +
+    "</div>\n" +
+    "");
+  $templateCache.put("ng-wig/views/ng-wig-view-only.html",
+    "<div class=\"ng-wig\" ng-model=\"content\">\n" +
+    "\n" +
+    "  <div class=\"nw-editor\">\n" +
+    "    <textarea class=\"nw-editor__src\" ng-show=\"editMode\" ng-model=\"content\"></textarea>\n" +
+    "    <iframe scrolling=\"{ autoexpand ? 'no' : 'yes' }\" show-images=\"showImages\" active-line=\"activeLine\" active-chars=\"activeChars\" highlight-mode=\"highlightMode\" class=\"nw-editor__res\" frameBorder=\"0\" ng-hide=\"editMode\" ng-model=\"content\" ng-wig-editable editable=\"false\" si-iframe></iframe>\n" +
     "  </div>\n" +
     "</div>\n" +
     "");
 }]);
-
