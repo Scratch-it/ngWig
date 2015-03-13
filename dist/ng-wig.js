@@ -107,6 +107,8 @@ angular.module('ngWig').directive('ngWig', function () {
           };
 
           scope.resizeEditor = function(height) {
+            console.log("height:");
+            console.log(height);
             var children = element.children();
             for (var i in children) {
               var child = children.eq(i);
@@ -140,7 +142,7 @@ angular.module('ngWig').directive('ngWigEditable', ["$timeout", function ($timeo
         $document.write('<!DOCTYPE html>\n<html>\n\t<head>\n\t\t'+ (scope.cssPath ? ('<link href="'+ scope.cssPath +'" rel="stylesheet" type="text/css">') : '') + '\n\t</head>\n\t<body contenteditable="'+!!('true' == attrs.editable)+'">\n\t</body>\n</html>');
         $document.close();
         $body = angular.element($element[0].contentDocument.body);
-        $html = angular.element($element[0].contentDocument.documentElement)
+        $html = angular.element($element[0].contentDocument.documentElement);
 
         //model --> view
         ctrl.$render = function () {
@@ -149,14 +151,7 @@ angular.module('ngWig').directive('ngWigEditable', ["$timeout", function ($timeo
             $body = angular.element($element[0].contentDocument.body);
 
             $body.attr('contenteditable', !!('true' == attrs.editable));
-
-            resizeEditor();
-//            newValue = ctrl.$viewValue || '';
-//            $document.open();
-//            $document.write(newValue);
-//            $document.close();
-//            $body = angular.element($element[0].contentDocument.body);
-//            $body.attributes['contenteditable'] = true
+            $timeout(function(){resizeEditor()},500); //there has to be a better way to do this...
         };
 
         //view --> model
@@ -253,6 +248,7 @@ angular.module('ngWig').directive('ngWigEditable', ["$timeout", function ($timeo
           //console.log(scope.activeLine);
           //$(e.target).css('border',"3px solid red");//.animate({border: ["3px solid red", "linear"]}, 5000);
             //.css('border',"3px solid red");
+          resizeEditor(); //remove this
           e.preventDefault();
           return;
         });
@@ -302,8 +298,17 @@ angular.module('ngWig').directive('ngWigEditable', ["$timeout", function ($timeo
         function resizeEditor() {
           if (!scope.autoexpand) {
             var height = scope.originalHeight;
+
+            console.log("height1:");
+            console.log(height);
+
           } else {
-            height = angular.element($document.documentElement).outerHeight();
+            $el =  angular.element($document.documentElement);
+            height = $el.outerHeight();
+            //console.log("$el:");
+            //console.log($el);
+            //console.log("height:");
+            //console.log(height);
           }
           scope.resizeEditor(height);
         }
@@ -314,6 +319,32 @@ angular.module('ngWig').directive('ngWigEditable', ["$timeout", function ($timeo
             resizeEditor();
           }
         });
+
+        //ctrl.$viewChangeListeners.push(function(){
+        //  console.log('hello we are ready!');
+        //  resizeEditor();
+        //});
+       //Thought-wait until the iframe finishes loading, and then compute the height once intially.
+       // This code
+       //function resizeEditor() {
+       //  $el.load(function () {
+       //    if (!scope.autoexpand) {
+       //      var height = scope.originalHeight;
+       //
+       //      console.log("height1:");
+       //      console.log(height);
+       //
+       //    } else {
+       //      $el = angular.element($document.documentElement);
+       //      height = $el.outerHeight();
+       //      console.log("$el:");
+       //      console.log($el);
+       //      console.log("height:");
+       //      console.log(height);
+       //    }
+       //    scope.resizeEditor(height);
+       //  });
+       //}
       }
 
       return {
